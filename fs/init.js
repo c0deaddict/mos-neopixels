@@ -38,11 +38,54 @@ Timer.set(5, Timer.REPEAT, function() {
 }
 
 
+function setLevel(level, prev) {
+    let green = Math.floor(numPixels / 2);
+    let yellow = green + Math.floor(numPixels / 4);
+    if (level < prev) {
+        for (let i = level + 1; i < prev + 1; i++) {
+            strip.setPixel(i, 0, 0, 0);
+        }
+    } else {
+        for (let i = prev; i < level + 1; i++) {
+            let b = brightness;
+            if (i < level) {
+                if (i < green) {
+                    strip.setPixel(i, 0, b, 0);
+                } else if (i < yellow) {
+                    strip.setPixel(i, b, b, 0);
+                } else {
+                    strip.setPixel(i, b, 0, 0);
+                }
+            } else {
+                strip.setPixel(i, 0, 0, 0);
+            }
+        }
+    }
+    strip.show();
+}
+
+strip.clear();
+strip.show();
+
+let maxLevel = 80;
+let currentLevel = 0;
+
 Net.serve({
   addr: 'udp://1337',
   ondata: function(conn, data) {
     print('Received from:', Net.ctos(conn, false, true, true), ':', data);
-    Net.send(conn, data);            // Echo received data back
+    let level = JSON.parse(data); // parseInt is not defined.
+    if (level >= 0) {
+        if (level > maxLevel) {
+            level = maxLevel;
+        }
+        level = Math.floor(level * (numPixels / maxLevel));
+        if (level !== currentLevel) {
+            setLevel(level, currentLevel);
+            currentLevel = level;
+        }
+    }
+    // Net.send(conn, data);            // Echo received data back
     Net.discard(conn, data.length);  // Discard received data
   },
 });
